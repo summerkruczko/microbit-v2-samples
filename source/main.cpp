@@ -1,14 +1,9 @@
 #include "MicroBit.h"
-#include "samples/Tests.h"
 
 MicroBit uBit;
 
-int main()
-{
+int main(){
     uBit.init();
-
-    out_of_box_experience();
-
-    microbit_panic( 999 );
+    uBit.display.scroll("Hello World!");
+    release_fiber();
 }
-
