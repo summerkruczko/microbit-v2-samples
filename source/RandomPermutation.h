@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <time.h>
 
+#ifndef RANDOM_PERMUTATION_H
+#define RANDOM_PERMUTATION_H
+
 // method to create a random permutation of integers (lower:higher)
 // result is stored in the 1D array provided
 void randomPermutation(int* buf, int bsize, int lower, int higher){
@@ -25,3 +28,5 @@ void randomPermutation(int* buf, int bsize, int lower, int higher){
         buf[i] = randPerm[i];
     }
 }
+
+#endif

@@ -1,5 +1,8 @@
 #include "MicroBit.h"
 
+#ifndef KEYBOARD_H
+#define KEYBOARD_H
+
 // represents a key on the keypad
 typedef struct{
     Pin *colPin;    // the pin connected to the column for this key
@@ -96,3 +99,5 @@ KeyPad initKeyPad(Pin *colPins[], Pin *rowPins[]){
     
     return keyPad;
 }
+
+#endif
