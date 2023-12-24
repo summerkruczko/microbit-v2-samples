@@ -24,6 +24,9 @@
 #define SSD1306_SET_VCOM_DESEL          0xDB
 #define SSD1306_SET_CHARGE_PUMP         0x8D
 
+// Define the dimensions of the display.
+#define OLED_WIDTH       128
+#define OLED_HEIGHT      64
 
 extern MicroBit uBit;
 
