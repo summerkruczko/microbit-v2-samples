@@ -161,7 +161,6 @@ SlidingPuzzle createPuzzle(uint8_t dim1, uint8_t dim2){
     // Validate dimensions
     if (dim1 <= 0 || dim2 <= 0) {
         fprintf(stderr, "Invalid dimensions for the puzzle\n");
-        // Handle the error appropriately, maybe exit or set an error state
         exit(EXIT_FAILURE);
     }
 

@@ -2,6 +2,7 @@
 #include "KeyBoard.h"
 #include "SlidingPuzzle.h"
 #include "DisplayLines.h"
+#include "DisplayNumbers.h"
 
 extern MicroBit uBit;
 SSD1306 *oled;
@@ -45,8 +46,8 @@ ManagedBuffer createPuzzleGrid(){
 void initHardware(){
     uBit.init();
     // set up Microbit to send
-    uBit.io.P19.setPull(PullMode::Up);
-    uBit.io.P20.setPull(PullMode::Up);
+    uBit.io.P15.setPull(PullMode::Up);
+    uBit.io.P16.setPull(PullMode::Up);
     // Create the display driver
     oled = new SSD1306(OLED_WIDTH, OLED_HEIGHT, 0x78);
 }
@@ -54,8 +55,27 @@ void initHardware(){
 int main(int argc, char const *argv[])
 {
     initHardware();
-    ManagedBuffer buf = createPuzzleGrid();
-    oled->sendData(buf.getBytes(), buf.length());
+
+    // test grid
+    // ManagedBuffer buf = createPuzzleGrid();
+    // uBit.display.scroll("grid");
+
+    // test nums
+    DisplayCharacter ch = newCharacter(WIDTH_0, NUM_HEIGHT, BYTES_0);
+    offsetCharacter(&ch, 123, 60);
+    ManagedBuffer buf2 = ch.buf;
+
+    // buf = mergeManagedBuffers(buf, buf2);
+    // ManagedBuffer buf(((OLED_WIDTH * OLED_HEIGHT)/8) + 1);
+    // buf[0] = 0x40;
+    // for (int i=1; i<buf.length(); i++)
+    //     buf[i] = 0x00;
+    // for (int i=1; i<ch.charBytes.length(); i++)
+    //     buf[i] = ch.charBytes[i];
+
+    oled->sendData(buf2.getBytes(), buf2.length());
+    uBit.display.scroll("data sent");
+    release_fiber();
     return 0;
 }
 
