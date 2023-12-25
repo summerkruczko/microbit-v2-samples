@@ -10,7 +10,7 @@ ManagedBuffer createHorizontalLineBuffer(uint8_t startX, uint8_t endX, uint8_t y
     uint8_t rowOffset = (y - bitNum)/8;         // get which row the line starts
     uint8_t bitShift = bitNum-1;                // number of times to shift the bit so it appears correctly on the right row
 
-    // First byte in the data buffer MUST be 0x40 - this is part of the communication protocol.
+    // First byte in the data buffer MUST be 0x80 - this is part of the communication protocol.
     ManagedBuffer buf(((OLED_WIDTH * OLED_HEIGHT)/8) + 1);
     buf[0] = 0x40;
     // Fill with blank space until start of line
@@ -34,7 +34,7 @@ ManagedBuffer createHorizontalLineBuffer(uint8_t startX, uint8_t endX, uint8_t y
 
 // Vertical lines: for our purposes we only need full columns.
 ManagedBuffer createVerticalLineBuffer(uint8_t x){
-    // First byte in the data buffer MUST be 0x40 - this is part of the communication protocol.
+    // First byte in the data buffer MUST be 0x80 - this is part of the communication protocol.
     ManagedBuffer buf(((OLED_WIDTH * OLED_HEIGHT)/8) + 1);
     buf[0] = 0x40;
     // First bit of empty space

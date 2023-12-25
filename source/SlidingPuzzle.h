@@ -4,6 +4,8 @@
 #ifndef SLIDING_PUZZLE_H
 #define SLIDING_PUZZLE_H
 
+extern MicroBit uBit;
+
 // array to contain the positions of each value when the puzzle is solved
 // const uint8_t PUZZLE_SOLUTION[16] = {0, 1, 2, 3,
 //                                      4, 5, 6, 7,
@@ -80,7 +82,7 @@ int isSolvable(uint8_t* puzzle, int dim1, int dim2) {
     }
 }
 
-// Function thats two arrays and checks they are equal
+// Function that takes two arrays of same length and checks they are equal
 int arraysEqual(uint8_t* arr1, uint8_t* arr2, int length) {
     for (int i = 0; i < length; i++) {
         if (arr1[i] != arr2[i]) {
@@ -100,21 +102,23 @@ int isSolved(SlidingPuzzle p){
 }
 
 // method to create a random array to represent a puzzle
-void createPuzzleArray(uint8_t* buf, uint8_t dim1, uint8_t dim2){
-    int randPerm[dim1*dim2];
-    // get random permutation of nums (0:max)
-    do {
-        randomPermutation(randPerm, dim1*dim2, 0, dim1*dim2-1);
-    } while (!isSolvable((uint8_t*)randPerm, dim1, dim2)); // Repeat until a solvable permutation is found
-
-    // store in puzzle array
-    for(int i = 0; i < dim1*dim2; i++){
-        buf[i] = (uint8_t) randPerm[i];
-        // test
-        // printf("%d ", buf[i]);
-    }
-    printf("\n");
-}
+// void createPuzzleArray(uint8_t* buf, uint8_t dim1, uint8_t dim2){
+//     int randPerm[dim1*dim2];
+//     uBit.display.scroll("4.1");
+//     // get random permutation of nums (0:max    
+//     do {
+//         randomPermutation(randPerm, dim1*dim2, 0, dim1*dim2-1);
+//     } while (!isSolvable((uint8_t*)randPerm, dim1, dim2)); // Repeat until a solvable permutation is found
+//     uBit.display.scroll("4.2");
+//     // store in puzzle array
+//     for(int i = 0; i < dim1*dim2; i++){
+//         uBit.display.scroll("4.4");
+//         buf[i] = (uint8_t) randPerm[i];
+//         // test
+//         // printf("%d ", buf[i]);
+//     }
+//     uBit.display.scroll("4.5");
+// }
 
 // Create the solution array for a puzzle
 void createSolutionArray(uint8_t* buf, uint8_t dim1, uint8_t dim2) {
@@ -156,77 +160,6 @@ void updateSlideable(SlidingPuzzle *p){
     }
 }
 
-// creates a new puzzle
-SlidingPuzzle createPuzzle(uint8_t dim1, uint8_t dim2){
-    // Validate dimensions
-    if (dim1 <= 0 || dim2 <= 0) {
-        fprintf(stderr, "Invalid dimensions for the puzzle\n");
-        exit(EXIT_FAILURE);
-    }
-
-    SlidingPuzzle p;
-    // initialise puzzle
-    p.dim1 = dim1;
-    p.dim2 = dim2;
-
-    // try to allocate space to the arrays
-    p.puzzleArray = (uint8_t*) malloc(sizeof(uint8_t) * p.dim1 * p.dim2);
-    if (!p.puzzleArray) {
-        fprintf(stderr, "Memory allocation failed for puzzleArray\n");
-        exit(EXIT_FAILURE);
-    }
-
-    p.solvedArray = (uint8_t*) malloc(sizeof(uint8_t) * p.dim1 * p.dim2);
-    if (!p.solvedArray) {
-        fprintf(stderr, "Memory allocation failed for puzzleArray\n");
-        free(p.puzzleArray);  // Clean up previously allocated memory
-        exit(EXIT_FAILURE);
-    }
-
-    p.tiles = (Tile**) malloc(sizeof(Tile*) * p.dim1 * p.dim2);
-    if (!p.tiles) {
-        fprintf(stderr, "Memory allocation failed for tiles\n");
-        free(p.puzzleArray);  // Clean up previously allocated memory
-        free(p.solvedArray);
-        exit(EXIT_FAILURE);
-    }
-    createPuzzleArray(p.puzzleArray, p.dim1, p.dim2);
-    createSolutionArray(p.solvedArray, p.dim1, p.dim2);
-    p.solved = 0;
-
-    // initialise tiles
-    for (int i = 0; i < p.dim1*p.dim2; i++)
-    {
-        Tile* t = (Tile*) malloc(sizeof(Tile)); // dynamically allocate each tile
-        if (!t) {
-            fprintf(stderr, "Memory allocation failed for tile %d\n", i);
-            // Free previously allocated memory
-            for (int j = 0; j < i; j++) {
-                free(p.tiles[j]);
-            }
-            free(p.tiles);
-            free(p.puzzleArray);
-            free(p.solvedArray);
-            exit(EXIT_FAILURE);
-        }
-        t->value = p.puzzleArray[i];
-        t->currentX = (i - (i % p.dim1))/dim1;
-        t->currentY = i % p.dim1;
-        t->currentInd = i;
-        t->solvedX = (t->value - (t->value % p.dim1))/dim1;
-        t->solvedY = t->value % p.dim1;
-        t->solvedInd = t->value;
-        p.tiles[i] = t;  // Store the pointer to the dynamically allocated tile
-        // log position of empty space
-        if (t->value == 0)
-            p.emptySpace = i;
-    }
-    // find if each tile is slideable
-    updateSlideable(&p);
-
-    return p;
-}
-
 // method to slide the specified tile.
 // if the tile t is slideable, it will trade places with the empty space et, and 1 will be returned
 // otherwise, the tile will not be moved, and 0 will be returned.
@@ -257,6 +190,139 @@ int slideTile(SlidingPuzzle *p, Tile *t, Tile *et){
     }
     return 0;
 }
+
+// creates a new puzzle
+SlidingPuzzle createPuzzle(uint8_t dim1, uint8_t dim2){
+    // Validate dimensions
+    if (dim1 <= 0 || dim2 <= 0) {
+        fprintf(stderr, "Invalid dimensions for the puzzle\n");
+        exit(EXIT_FAILURE);
+    }
+    // uBit.display.scroll("1");
+    SlidingPuzzle p;
+    // initialise puzzle
+    p.dim1 = dim1;
+    p.dim2 = dim2;
+
+    // try to allocate space to the arrays
+    p.puzzleArray = (uint8_t*) malloc(sizeof(uint8_t) * p.dim1 * p.dim2);
+    if (!p.puzzleArray) {
+        fprintf(stderr, "Memory allocation failed for puzzleArray\n");
+        exit(EXIT_FAILURE);
+    }
+    // uBit.display.scroll("2");
+
+    p.solvedArray = (uint8_t*) malloc(sizeof(uint8_t) * p.dim1 * p.dim2);
+    if (!p.solvedArray) {
+        fprintf(stderr, "Memory allocation failed for puzzleArray\n");
+        free(p.puzzleArray);  // Clean up previously allocated memory
+        exit(EXIT_FAILURE);
+    }
+    // uBit.display.scroll("3");
+
+    p.tiles = (Tile**) malloc(sizeof(Tile*) * p.dim1 * p.dim2);
+    if (!p.tiles) {
+        fprintf(stderr, "Memory allocation failed for tiles\n");
+        free(p.puzzleArray);  // Clean up previously allocated memory
+        free(p.solvedArray);
+        exit(EXIT_FAILURE);
+    }
+    // uBit.display.scroll("4");
+    // createPuzzleArray(p.puzzleArray, p.dim1, p.dim2);
+    // uBit.display.scroll("5");
+    createSolutionArray(p.solvedArray, p.dim1, p.dim2);
+    // uBit.display.scroll("6");
+    
+    // copy the solution array to the puzzle array
+    for (int i = 0; i < p.dim1*p.dim2; i++)
+    {
+        p.puzzleArray[i] = p.solvedArray[i];
+    }
+    p.solved = 0;
+
+    // initialise tiles
+    for (int i = 0; i < p.dim1*p.dim2; i++)
+    {
+        // uBit.display.scroll("7");
+        Tile* t = (Tile*) malloc(sizeof(Tile)); // dynamically allocate each tile
+        if (!t) {
+            fprintf(stderr, "Memory allocation failed for tile %d\n", i);
+            // Free previously allocated memory
+            for (int j = 0; j < i; j++) {
+                free(p.tiles[j]);
+            }
+            free(p.tiles);
+            free(p.puzzleArray);
+            free(p.solvedArray);
+            exit(EXIT_FAILURE);
+        }
+        // uBit.display.scroll("8");
+        t->value = p.puzzleArray[i];
+        t->currentX = (i - (i % p.dim1))/dim1;
+        t->currentY = i % p.dim1;
+        t->currentInd = i;
+        t->solvedX = (t->value - (t->value % p.dim1))/dim1;
+        t->solvedY = t->value % p.dim1;
+        t->solvedInd = t->value;
+        p.tiles[i] = t;  // Store the pointer to the dynamically allocated tile
+        // log position of empty space
+        if (t->value == 0)
+            p.emptySpace = i;
+    }
+    // find if each tile is slideable
+    updateSlideable(&p);
+    // uBit.display.scroll("9");
+
+    // Now we shuffle the tiles to create a solvable puzzle
+    // We do this by sliding the empty space around the puzzle
+    // We do this a random number of times
+    int numMoves = 100;
+    for (int i = 0; i < numMoves; i++) {
+        // Find the empty space
+        Tile* emptyTile = p.tiles[p.emptySpace];
+        // Find a random adjacent tile
+        
+        int randomTile = rand() % (p.dim1 * p.dim2);
+        while (!isSlideable(&p, *p.tiles[randomTile])) {
+            randomTile = rand() % (p.dim1 * p.dim2);
+        }
+        // Slide the random tile into the empty space
+        slideTile(&p, p.tiles[randomTile], emptyTile);
+    }
+    // uBit.display.scroll("10");
+    return p;
+}
+
+// method to slide the specified tile.
+// if the tile t is slideable, it will trade places with the empty space et, and 1 will be returned
+// otherwise, the tile will not be moved, and 0 will be returned.
+// int slideTile(SlidingPuzzle *p, Tile *t, Tile *et){
+//     if (t->slideable == 1 && et->value == 0){
+//         // store tile values
+//         Tile movedTile = *t;
+
+//         // swap positions
+//         t->currentInd = et->currentInd;
+//         t->currentX = et->currentX;
+//         t->currentY = et->currentY;
+//         et->currentInd = movedTile.currentInd;
+//         et->currentX = movedTile.currentX;
+//         et->currentY = movedTile.currentY;
+
+//         // update puzzle
+//         p->puzzleArray[t->currentInd] = t->value;
+//         p->tiles[t->currentInd] = t;
+//         p->puzzleArray[et->currentInd] = et->value;
+//         p->tiles[et->currentInd] = et;
+//         p->emptySpace = et->currentInd;
+
+//         // update slideable
+//         updateSlideable(p);
+
+//         return 1;
+//     }
+//     return 0;
+// }
 
 // frees memory allocated to specified puzzle
 void freePuzzle(SlidingPuzzle* p){

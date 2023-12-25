@@ -54,7 +54,7 @@ const uint8_t BYTE_ARR_7[] = {0b00000001, 0b11100001, 0b11111001, 0b00011111, 0b
 const uint8_t BYTE_ARR_8[] = {0b11101110, 0b11111111, 0b00010001, 0b11111111, 0b11101110,
                               0b00000001, 0b00000011, 0b00000010, 0b00000011, 0b00000001};
 
-const uint8_t BYTE_ARR_9[] = {0b00011110, 0b00111111, 0b00100001, 0b11111111, 0b11111110
+const uint8_t BYTE_ARR_9[] = {0b00011110, 0b00111111, 0b00100001, 0b11111111, 0b11111110,
                               0b00000000, 0b00000000, 0b00000000, 0b00000011, 0b00000011};
 
 // ---------------------------------------------------------------------------------------------------------------------------------
@@ -74,6 +74,7 @@ const ManagedBuffer BYTES_9((uint8_t*) BYTE_ARR_9, WIDTH_9*NUM_HEIGHT);
 // ---------------------------------------------------------------------------------------------------------------------------------
 
 typedef struct{
+    int value;                  // value of this character
     int x;                      // x coordinate of this character
     int y;                      // y coordinate of this character
     int width;                  // width of this character in bytes/pages (eg. 3px = width 3)
@@ -82,9 +83,10 @@ typedef struct{
     ManagedBuffer buf;          // buffer to store total byte data of this character
 } DisplayCharacter;
 
-DisplayCharacter newCharacter(int width, int height){
+DisplayCharacter newCharacter(int value, int width, int height){
     DisplayCharacter ch;
     ManagedBuffer buf((width*height));
+    ch.value = value;
     ch.width = width;
     ch.height = height;
     ch.charBytes = buf;
@@ -92,8 +94,9 @@ DisplayCharacter newCharacter(int width, int height){
     return ch;
 }
 
-DisplayCharacter newCharacter(int width, int height, ManagedBuffer charBytes){
+DisplayCharacter newCharacter(int value, int width, int height, ManagedBuffer charBytes){
     DisplayCharacter ch;
+    ch.value = value;
     ch.width = width;
     ch.height = height;
     ch.charBytes = charBytes;
@@ -105,12 +108,12 @@ DisplayCharacter newCharacter(int width, int height, ManagedBuffer charBytes){
 // stores result in ch.buf, which is ready to display.
 void offsetCharacter(DisplayCharacter *ch, int x, int y){
     // don't allow coordinates out of bounds
-    uBit.display.scroll("1");
+    // uBit.display.scroll("1");
     if (x <= 0 || y <= 0 || x > 128 || y > 64){
         uBit.serial.printf("Invalid coordinates\n");
         exit(EXIT_FAILURE);
     }
-    uBit.display.scroll("2");
+    // uBit.display.scroll("2");
     ManagedBuffer buf(((OLED_WIDTH * OLED_HEIGHT)/8) + 1);  // will store all bytes needed to display a character on the screen
     ch->x = x;
     ch->y = y;
@@ -120,10 +123,10 @@ void offsetCharacter(DisplayCharacter *ch, int x, int y){
     int yOffset = y % 8 == 0 ? 8 : (y % 8);     // offset for each row in the vertical direction
     int rowOffset = (y - yOffset)/8;            // row number of this character
     int shiftAmount = yOffset-1;                // the amount to shift data in a page
-    uBit.display.scroll("3");
+    // uBit.display.scroll("3");
     // populate buffer
 
-    // First byte in the data buffer MUST be 0x40 - this is part of the communication protocol.
+    // First byte in the data buffer MUST be 0x80 - this is part of the communication protocol.
     buf[0] = 0x40;
 
     // initial offset = rowOffset + first xOffset
@@ -133,7 +136,7 @@ void offsetCharacter(DisplayCharacter *ch, int x, int y){
         buf[i] = 0x00;
         i++;
     }
-    uBit.display.scroll("4");
+    // uBit.display.scroll("4");
     // character data
     int byteNum = 0;
     // for each row-height+1 because yOffset may push number into another page
@@ -142,7 +145,7 @@ void offsetCharacter(DisplayCharacter *ch, int x, int y){
         for (int k = 0; k < ch->width; k++){
             // at any time a page may be made of two parts:
             // the current page, shifted by yOffset(if it exists)
-            int part1 = byteNum > ch->charBytes.length() ? 0 :
+            int part1 = byteNum >= ch->charBytes.length() ? 0 :
                         ch->charBytes[byteNum] << shiftAmount;
             
             // the remainder of the previous page (if it exists)                 
