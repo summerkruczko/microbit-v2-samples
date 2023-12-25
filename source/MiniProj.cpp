@@ -70,8 +70,73 @@ ManagedBuffer createGridBuffer(){
 }
 
 // creates a buffer containing display data for all the numbers in a puzzle
-ManagedBuffer createNumBuffer(SlidingPuzzle p){
-    
+ManagedBuffer createNumBuffer(SlidingPuzzle p, DisplayCharacter *digits){
+    ManagedBuffer buf;
+    ManagedBuffer buf2;
+    int xCoordinates[4] = {X_1, X_2, X_3, X_4};
+    int yCoordinates[4] = {Y_1, Y_2, Y_3, Y_4};
+    int count = 0;
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            if (p.puzzleArray[count] == 0);     // don't display
+            // in the case of 2 digit numbers
+            else if (p.puzzleArray[count] == 10){
+                offsetCharacter(&ch1, xCoordinates[j], yCoordinates[i]);
+                offsetCharacter(&ch0, xCoordinates[j]+5, yCoordinates[i]);
+                buf2 = mergeManagedBuffers(ch1.buf, ch0.buf);
+            }
+            else if (p.puzzleArray[count] == 11){
+                offsetCharacter(&ch1, xCoordinates[j], yCoordinates[i]);
+                buf2 = ch1.buf;
+                offsetCharacter(&ch1, xCoordinates[j]+6, yCoordinates[i]);
+                buf2 = mergeManagedBuffers(buf2, ch1.buf);
+            }
+            else if (p.puzzleArray[count] == 12){
+                offsetCharacter(&ch1, xCoordinates[j], yCoordinates[i]);
+                offsetCharacter(&ch2, xCoordinates[j]+5, yCoordinates[i]);
+                buf2 = mergeManagedBuffers(ch1.buf, ch2.buf);
+            }
+            else if (p.puzzleArray[count] == 13){
+                offsetCharacter(&ch1, xCoordinates[j], yCoordinates[i]);
+                offsetCharacter(&ch3, xCoordinates[j]+5, yCoordinates[i]);
+                buf2 = mergeManagedBuffers(ch1.buf, ch3.buf);
+            }
+            else if (p.puzzleArray[count] == 14){
+                offsetCharacter(&ch1, xCoordinates[j], yCoordinates[i]);
+                offsetCharacter(&ch4, xCoordinates[j]+4, yCoordinates[i]);
+                buf2 = mergeManagedBuffers(ch1.buf, ch4.buf);
+            }
+            else if (p.puzzleArray[count] == 15){
+                offsetCharacter(&ch1, xCoordinates[j], yCoordinates[i]);
+                offsetCharacter(&ch5, xCoordinates[j]+5, yCoordinates[i]);
+                buf2 = mergeManagedBuffers(ch1.buf, ch5.buf);
+            }
+            // single digit numbers except 0
+            else if (p.puzzleArray[count] < 10){
+                offsetCharacter(&digits[p.puzzleArray[count]], xCoordinates[j], yCoordinates[i]);
+                buf2 = digits[p.puzzleArray[count]].buf;
+            }
+            // merge buffers
+            buf = mergeManagedBuffers(buf, buf2);  
+            count++;
+        }
+    }
+    return buf;
+}
+
+void displayPuzzle(SlidingPuzzle p){
+    DisplayCharacter digits[10] = {ch0, ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8, ch9};
+
+    // get buffers
+    ManagedBuffer gridBuf = createGridBuffer();
+    ManagedBuffer numBuf = createNumBuffer(p, digits);
+    // merge
+    ManagedBuffer buf = mergeManagedBuffers(gridBuf, numBuf);
+
+    // display
+    oled->sendData(buf.getBytes(), buf.length());
 }
 
 void initHardware(){
@@ -97,24 +162,59 @@ int main(int argc, char const *argv[])
     SlidingPuzzle puzzle = createPuzzle(4, 4);
 
     // 3 display puzzle
-    DisplayCharacter digits[10] = {ch0, ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8, ch9};
-    ManagedBuffer gridBuf = createGridBuffer();
-    uBit.display.scroll("dig");
+    displayPuzzle(puzzle);
 
-    // test grid
-    // ManagedBuffer buf = createGridBuffer();
+    // start game
+    int keyNums[16] = {KEY_1, KEY_2, KEY_3, KEY_A,
+                       KEY_4, KEY_5, KEY_6, KEY_B, 
+                       KEY_7, KEY_8, KEY_9, KEY_C,
+                       KEY_ASK, KEY_0, KEY_HSH, KEY_D};
+    int tileSlid = 0;
+    
+    // while the game is running:
+    while (uBit.buttonB.isPressed() == 0)
+    {
+        scanKeys(&keyPad);
 
-    // test nums
-    DisplayCharacter ch = digits[3];
-    uBit.display.scroll(digits[3].value);
-    offsetCharacter(&ch, 1, 1);
-    ManagedBuffer buf2 = ch.buf;
-    offsetCharacter(&ch, 15, 19);
-    ManagedBuffer buf3 = ch.buf;
-    buf2 = mergeManagedBuffers(buf2, buf3);
+        // check each key
+        for (int i = 0; i < 16; i++)
+        {
+            // if a key is pressed
+            if (keyPad.keys[keyNums[i]].pressed){
+                // if corresponding tile is slideable
+                if(puzzle.tiles[i]->slideable){
+                    // slide tile
+                    slideTile(&puzzle, puzzle.tiles[i], puzzle.tiles[puzzle.emptySpace]);
+                    tileSlid = 1;
+                } 
+                // otherwise, make some noise
+                else {
+                    //uBit.audio.soundExpressions.playAsync("twinkle");
+                    uBit.display.printChar('x');
+                }
+            }
+        }
+        
 
-    oled->sendData(buf2.getBytes(), buf2.length());
-    uBit.display.scroll("data sent");
+        // if a tile was slid
+        if(tileSlid){
+            //  display changes
+            displayPuzzle(puzzle);
+            // check if puzzle is solved
+            if (isSolved(puzzle)){
+                uBit.sleep(200);
+                freePuzzle(&puzzle);
+                puzzle = createPuzzle(4, 4);
+                displayPuzzle(puzzle);
+            }
+        }
+        
+        // reset
+        tileSlid = 0;
+        resetKeys(&keyPad);
+    }
+    
+
     release_fiber();
     return 0;
 }

@@ -223,6 +223,7 @@ SlidingPuzzle createPuzzle(uint8_t dim1, uint8_t dim2){
     // We do this by sliding the empty space around the puzzle
     // We do this a random number of times
     int numMoves = 100;
+    srand(time(NULL));
     for (int i = 0; i < numMoves; i++) {
         // Find the empty space
         Tile* emptyTile = p.tiles[p.emptySpace];
