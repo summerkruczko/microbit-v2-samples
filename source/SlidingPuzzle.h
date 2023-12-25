@@ -38,21 +38,6 @@ typedef struct {
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 // METHODS
-
-// Function to count the number of inversions
-int countInversions(uint8_t* arr, int length) {
-    int inv_count = 0;
-    for (int i = 0; i < length - 1; i++) {
-        for (int j = i + 1; j < length; j++) {
-            // Count pairs(i, j) such that i appears before j, but i > j.
-            if (arr[i] > arr[j] && arr[i] != 0 && arr[j] != 0) {
-                inv_count++;
-            }
-        }
-    }
-    return inv_count;
-}
-
 // Function to find the position of the blank (0) tile
 int findBlankPosition(uint8_t* puzzle, int dim1, int dim2) {
     for (int i = 0; i < dim1 * dim2; i++) {
@@ -61,25 +46,6 @@ int findBlankPosition(uint8_t* puzzle, int dim1, int dim2) {
         }
     }
     return -1; // Should never happen if the puzzle is valid
-}
-
-// Function to check if the puzzle is solvable
-int isSolvable(uint8_t* puzzle, int dim1, int dim2) {
-    int inv_count = countInversions(puzzle, dim1 * dim2);
-    if (dim1 % 2 == 1) {
-        // If grid is odd, return true if inversion count is even.
-        return inv_count % 2 == 0;
-    } else {
-        // If the grid is even, find the position of the blank from the bottom
-        int blank_row = dim1 - (findBlankPosition(puzzle, dim1, dim2) / dim1);
-        if (blank_row % 2 == 0) {
-            // If the blank is on an even row counting from the bottom, return true if inversion count is odd.
-            return inv_count % 2 == 1;
-        } else {
-            // If the blank is on an odd row counting from the bottom, return true if inversion count is even.
-            return inv_count % 2 == 0;
-        }
-    }
 }
 
 // Function that takes two arrays of same length and checks they are equal
@@ -100,25 +66,6 @@ int isSolved(SlidingPuzzle p){
     else 
         return 0;
 }
-
-// method to create a random array to represent a puzzle
-// void createPuzzleArray(uint8_t* buf, uint8_t dim1, uint8_t dim2){
-//     int randPerm[dim1*dim2];
-//     uBit.display.scroll("4.1");
-//     // get random permutation of nums (0:max    
-//     do {
-//         randomPermutation(randPerm, dim1*dim2, 0, dim1*dim2-1);
-//     } while (!isSolvable((uint8_t*)randPerm, dim1, dim2)); // Repeat until a solvable permutation is found
-//     uBit.display.scroll("4.2");
-//     // store in puzzle array
-//     for(int i = 0; i < dim1*dim2; i++){
-//         uBit.display.scroll("4.4");
-//         buf[i] = (uint8_t) randPerm[i];
-//         // test
-//         // printf("%d ", buf[i]);
-//     }
-//     uBit.display.scroll("4.5");
-// }
 
 // Create the solution array for a puzzle
 void createSolutionArray(uint8_t* buf, uint8_t dim1, uint8_t dim2) {
@@ -228,7 +175,6 @@ SlidingPuzzle createPuzzle(uint8_t dim1, uint8_t dim2){
         exit(EXIT_FAILURE);
     }
     // uBit.display.scroll("4");
-    // createPuzzleArray(p.puzzleArray, p.dim1, p.dim2);
     // uBit.display.scroll("5");
     createSolutionArray(p.solvedArray, p.dim1, p.dim2);
     // uBit.display.scroll("6");
@@ -292,37 +238,6 @@ SlidingPuzzle createPuzzle(uint8_t dim1, uint8_t dim2){
     // uBit.display.scroll("10");
     return p;
 }
-
-// method to slide the specified tile.
-// if the tile t is slideable, it will trade places with the empty space et, and 1 will be returned
-// otherwise, the tile will not be moved, and 0 will be returned.
-// int slideTile(SlidingPuzzle *p, Tile *t, Tile *et){
-//     if (t->slideable == 1 && et->value == 0){
-//         // store tile values
-//         Tile movedTile = *t;
-
-//         // swap positions
-//         t->currentInd = et->currentInd;
-//         t->currentX = et->currentX;
-//         t->currentY = et->currentY;
-//         et->currentInd = movedTile.currentInd;
-//         et->currentX = movedTile.currentX;
-//         et->currentY = movedTile.currentY;
-
-//         // update puzzle
-//         p->puzzleArray[t->currentInd] = t->value;
-//         p->tiles[t->currentInd] = t;
-//         p->puzzleArray[et->currentInd] = et->value;
-//         p->tiles[et->currentInd] = et;
-//         p->emptySpace = et->currentInd;
-
-//         // update slideable
-//         updateSlideable(p);
-
-//         return 1;
-//     }
-//     return 0;
-// }
 
 // frees memory allocated to specified puzzle
 void freePuzzle(SlidingPuzzle* p){
