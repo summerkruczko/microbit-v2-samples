@@ -39,6 +39,9 @@ enum KeyType {
     KEY_HSH = 11
 };
 
+// -----------------------------------------------------------------------------------------------------------------------------------------
+// FUNCTIONS
+
 // method to find the state of each key
 // feeds power through each column, and finds which rows the power is being channelled to;
 // the corresponding keys have their pressed attribute set to 1.

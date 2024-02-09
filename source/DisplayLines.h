@@ -4,7 +4,8 @@
 #ifndef DISPLAY_LINES_H
 #define DISPLAY_LINES_H
 
-// Horizontal lines: send n identical bits
+// method to draw horizontal lines at y from startX to endX on the display.
+// result returned in ManagedBuffer object.
 ManagedBuffer createHorizontalLineBuffer(uint8_t startX, uint8_t endX, uint8_t y){
     uint8_t bitNum = y % 8 == 0 ? 8 : y % 8;    // get position of line within a row/byte, 1:8. Make sure it doesn't equal 0
     uint8_t rowOffset = (y - bitNum)/8;         // get which row the line starts
@@ -32,7 +33,9 @@ ManagedBuffer createHorizontalLineBuffer(uint8_t startX, uint8_t endX, uint8_t y
     return buf;
 }
 
-// Vertical lines: for our purposes we only need full columns.
+// method to draw vertical lines at x from start to the end of the display.
+// for puzzle purposes, x values not necessary!
+// result returned in ManagedBuffer object.
 ManagedBuffer createVerticalLineBuffer(uint8_t x){
     // First byte in the data buffer MUST be 0x80 - this is part of the communication protocol.
     ManagedBuffer buf(((OLED_WIDTH * OLED_HEIGHT)/8) + 1);
@@ -61,7 +64,7 @@ ManagedBuffer createVerticalLineBuffer(uint8_t x){
     return buf;
 }
 
-// merge 2 buffers
+// merges 2 buffers together, and returns the result
 ManagedBuffer mergeManagedBuffers(ManagedBuffer buffer1, ManagedBuffer buffer2){
     // Determine the maximum length of the two buffers
     int maxLength = buffer1.length() > buffer2.length() ? buffer1.length() : buffer2.length();

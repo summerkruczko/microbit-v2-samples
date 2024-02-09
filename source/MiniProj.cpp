@@ -4,10 +4,11 @@
 #include "DisplayLines.h"
 #include "DisplayNumbers.h"
 
-extern MicroBit uBit;
+MicroBit uBit;
 SSD1306 *oled;
 KeyPad keyPad;
 
+// information that allows us to display numerical digits
 DisplayCharacter ch0 = newCharacter(0, WIDTH_0, NUM_HEIGHT, BYTES_0);
 DisplayCharacter ch1 = newCharacter(1, WIDTH_1, NUM_HEIGHT, BYTES_1);
 DisplayCharacter ch2 = newCharacter(2, WIDTH_2, NUM_HEIGHT, BYTES_2);
@@ -33,99 +34,68 @@ enum Coordinates {
     Y_4 = 52,
 };
 
-ManagedBuffer createGridBuffer(){
-    // Vertical lines. 2 pixels thick
-    // V line 1:
-    ManagedBuffer buf = createVerticalLineBuffer(32);
-    buf = mergeManagedBuffers(buf, createVerticalLineBuffer(33));
-    // V line 2:
-    buf = mergeManagedBuffers(buf, createVerticalLineBuffer(48));
-    buf = mergeManagedBuffers(buf, createVerticalLineBuffer(49));
-    // V line 3:
-    buf = mergeManagedBuffers(buf, createVerticalLineBuffer(64));
-    buf = mergeManagedBuffers(buf, createVerticalLineBuffer(65));
-    // V line 4:
-    buf = mergeManagedBuffers(buf, createVerticalLineBuffer(80));
-    buf = mergeManagedBuffers(buf, createVerticalLineBuffer(81));
-    // V line 5:
-    buf = mergeManagedBuffers(buf, createVerticalLineBuffer(96));
-    buf = mergeManagedBuffers(buf, createVerticalLineBuffer(97));
+// -----------------------------------------------------------------------------------------------------------------------------------------
+// FUNCTIONS TO BUILD THIS SLIDING PUZZLE GAME
 
-    // Horizontal lines. Middle ones are 2 pixels thick
-    // H line 1:
-    buf = mergeManagedBuffers(buf, createHorizontalLineBuffer(32, 97, 1));
-    // H line 2:
-    buf = mergeManagedBuffers(buf, createHorizontalLineBuffer(32, 97, 17));
-    buf = mergeManagedBuffers(buf, createHorizontalLineBuffer(32, 97, 16));
-    // H line 3:
-    buf = mergeManagedBuffers(buf, createHorizontalLineBuffer(32, 97, 32));
-    buf = mergeManagedBuffers(buf, createHorizontalLineBuffer(32, 97, 33));
-    // H line 4:
-    buf = mergeManagedBuffers(buf, createHorizontalLineBuffer(32, 97, 48));
-    buf = mergeManagedBuffers(buf, createHorizontalLineBuffer(32, 97, 49));
-    // H line 5:
-    buf = mergeManagedBuffers(buf, createHorizontalLineBuffer(32, 97, 64));
+// creates a buffer which when sent to the OLED screen, will show a 4x4 grid.
+ManagedBuffer createGridBuffer() {
+    ManagedBuffer buf;
 
-    return buf; 
+    // Create and merge vertical lines
+    for (int x = 32; x <= 96; x += 16) {
+        buf = mergeManagedBuffers(buf, createVerticalLineBuffer(x));
+        buf = mergeManagedBuffers(buf, createVerticalLineBuffer(x + 1));
+    }
+
+    // Create and merge horizontal lines, with middle ones 2 pixels thick
+    for (int y = 1; y <= 65; y += 16) {
+        if (y != 1 && y < 64 || y == 65) // half of lines 2-4; line 5
+            buf = mergeManagedBuffers(buf, createHorizontalLineBuffer(32, 97, y - 1));
+        else    // half of lines 2-4; line 1
+            buf = mergeManagedBuffers(buf, createHorizontalLineBuffer(32, 97, y));
+    }
+
+    return buf;
 }
 
-// creates a buffer containing display data for all the numbers in a puzzle
-ManagedBuffer createNumBuffer(SlidingPuzzle p, DisplayCharacter *digits){
+// creates a buffer which when sent to the OLED screen, will show the puzzle numbers in
+// their respective locations
+ManagedBuffer createNumBuffer(SlidingPuzzle p, DisplayCharacter *digits) {
     ManagedBuffer buf;
     ManagedBuffer buf2;
     int xCoordinates[4] = {X_1, X_2, X_3, X_4};
     int yCoordinates[4] = {Y_1, Y_2, Y_3, Y_4};
     int count = 0;
-    for (int i = 0; i < 4; i++)
-    {
-        for (int j = 0; j < 4; j++)
-        {
-            if (p.puzzleArray[count] == 0);     // don't display
-            // in the case of 2 digit numbers
-            else if (p.puzzleArray[count] == 10){
-                offsetCharacter(&ch1, xCoordinates[j], yCoordinates[i]);
-                offsetCharacter(&ch0, xCoordinates[j]+5, yCoordinates[i]);
-                buf2 = mergeManagedBuffers(ch1.buf, ch0.buf);
+    
+    // for each column
+    for (int i = 0; i < 4; i++) {
+        // for each row: increase count every time as well
+        for (int j = 0; j < 4; j++, count++) {
+            if (p.puzzleArray[count] == 0) continue; // Don't display 0
+
+            // Handle two-digit numbers (10 to 15)
+            if (p.puzzleArray[count] >= 10 && p.puzzleArray[count] <= 15) {
+                DisplayCharacter *firstDigit = &ch1;                                // All two-digit numbers handled start with '1'
+                DisplayCharacter *secondDigit = &digits[p.puzzleArray[count] % 10]; // eg 13 % 10 = 3
+                offsetCharacter(firstDigit, xCoordinates[j], yCoordinates[i]);
+                offsetCharacter(secondDigit, xCoordinates[j] + 5, yCoordinates[i]);
+                buf2 = mergeManagedBuffers(firstDigit->buf, secondDigit->buf);
+            
+            // Handle single-digit numbers (1 to 9)
+            } else {
+                DisplayCharacter *digit = &digits[p.puzzleArray[count]];
+                offsetCharacter(digit, xCoordinates[j], yCoordinates[i]);
+                buf2 = digit->buf;
             }
-            else if (p.puzzleArray[count] == 11){
-                offsetCharacter(&ch1, xCoordinates[j], yCoordinates[i]);
-                buf2 = ch1.buf;
-                offsetCharacter(&ch1, xCoordinates[j]+6, yCoordinates[i]);
-                buf2 = mergeManagedBuffers(buf2, ch1.buf);
-            }
-            else if (p.puzzleArray[count] == 12){
-                offsetCharacter(&ch1, xCoordinates[j], yCoordinates[i]);
-                offsetCharacter(&ch2, xCoordinates[j]+5, yCoordinates[i]);
-                buf2 = mergeManagedBuffers(ch1.buf, ch2.buf);
-            }
-            else if (p.puzzleArray[count] == 13){
-                offsetCharacter(&ch1, xCoordinates[j], yCoordinates[i]);
-                offsetCharacter(&ch3, xCoordinates[j]+5, yCoordinates[i]);
-                buf2 = mergeManagedBuffers(ch1.buf, ch3.buf);
-            }
-            else if (p.puzzleArray[count] == 14){
-                offsetCharacter(&ch1, xCoordinates[j], yCoordinates[i]);
-                offsetCharacter(&ch4, xCoordinates[j]+4, yCoordinates[i]);
-                buf2 = mergeManagedBuffers(ch1.buf, ch4.buf);
-            }
-            else if (p.puzzleArray[count] == 15){
-                offsetCharacter(&ch1, xCoordinates[j], yCoordinates[i]);
-                offsetCharacter(&ch5, xCoordinates[j]+5, yCoordinates[i]);
-                buf2 = mergeManagedBuffers(ch1.buf, ch5.buf);
-            }
-            // single digit numbers except 0
-            else if (p.puzzleArray[count] < 10){
-                offsetCharacter(&digits[p.puzzleArray[count]], xCoordinates[j], yCoordinates[i]);
-                buf2 = digits[p.puzzleArray[count]].buf;
-            }
-            // merge buffers
-            buf = mergeManagedBuffers(buf, buf2);  
-            count++;
+
+            // Merge the individual number buffer into the main buffer
+            buf = mergeManagedBuffers(buf, buf2);
         }
     }
     return buf;
 }
 
+// takes buffers which display grid/numbers, merges them, and sends to OLED screen.
 void displayPuzzle(SlidingPuzzle p){
     DisplayCharacter digits[10] = {ch0, ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8, ch9};
 
@@ -139,6 +109,21 @@ void displayPuzzle(SlidingPuzzle p){
     oled->sendData(buf.getBytes(), buf.length());
 }
 
+// method to clear the screen
+void clearScreen(){
+    ManagedBuffer buf(((OLED_WIDTH * OLED_HEIGHT)/8) + 1);
+    buf[0] = 0x40;
+
+    // set every page to 0
+    for(int i = 1; i <buf.length(); i++){
+        buf[i] = 0x00;
+    }
+
+    // send to screen
+    oled->sendData(buf.getBytes(), buf.length());
+}
+
+// sets up hardware needed to play this game
 void initHardware(){
     uBit.init();
     // set up Microbit to send
@@ -152,11 +137,14 @@ void initHardware(){
     keyPad = initKeyPad(colPins, rowPins);
 }
 
+// -----------------------------------------------------------------------------------------------------------------------------------------
+// MAIN FUNCTION
+// run this to play a 4x4 sliding puzzle game!
+// press button B to quit (not key B)
 int main(int argc, char const *argv[])
 {
     // 1 set up componenets
     initHardware();
-    uBit.display.scroll("init");
 
     // 2 create a new puzzle
     SlidingPuzzle puzzle = createPuzzle(4, 4);
@@ -172,8 +160,13 @@ int main(int argc, char const *argv[])
     int tileSlid = 0;
     
     // while the game is running:
-    while (uBit.buttonB.isPressed() == 0)
+    while (1)
     {
+        // quit game
+        if (uBit.buttonB.isPressed())
+            break;
+
+        // see which keys are pressed
         scanKeys(&keyPad);
 
         // check each key
@@ -186,16 +179,10 @@ int main(int argc, char const *argv[])
                     // slide tile
                     slideTile(&puzzle, puzzle.tiles[i], puzzle.tiles[puzzle.emptySpace]);
                     tileSlid = 1;
-                } 
-                // otherwise, make some noise
-                else {
-                    //uBit.audio.soundExpressions.playAsync("twinkle");
-                    uBit.display.printChar('x');
                 }
             }
         }
         
-
         // if a tile was slid
         if(tileSlid){
             //  display changes
@@ -203,18 +190,25 @@ int main(int argc, char const *argv[])
             // check if puzzle is solved
             if (isSolved(puzzle)){
                 uBit.sleep(200);
+                // free data
                 freePuzzle(&puzzle);
+                // create new puzzle
                 puzzle = createPuzzle(4, 4);
+                // display new puzzle
                 displayPuzzle(puzzle);
             }
+            
         }
         
         // reset
         tileSlid = 0;
         resetKeys(&keyPad);
     }
-    
 
+    // clear screen
+    clearScreen();
+    // free data and process
+    freePuzzle(&puzzle);
     release_fiber();
     return 0;
 }

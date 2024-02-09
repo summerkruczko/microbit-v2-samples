@@ -6,6 +6,7 @@
 
 extern MicroBit uBit;
 
+// stores width/height of premade character bytes
 enum CharData {
     // width in bytes/pages of each number
     WIDTH_0 = 5,
@@ -72,7 +73,7 @@ const ManagedBuffer BYTES_8((uint8_t*) BYTE_ARR_8, WIDTH_8*NUM_HEIGHT);
 const ManagedBuffer BYTES_9((uint8_t*) BYTE_ARR_9, WIDTH_9*NUM_HEIGHT);
 
 // ---------------------------------------------------------------------------------------------------------------------------------
-
+// represents a character which can be displayed on the OLED screen
 typedef struct{
     int value;                  // value of this character
     int x;                      // x coordinate of this character
@@ -80,9 +81,13 @@ typedef struct{
     int width;                  // width of this character in bytes/pages (eg. 3px = width 3)
     int height;                 // height of this character in bytes/pages (eg. 10px = height 2)
     ManagedBuffer charBytes;    // buffer to store bytes/pages that make up this character
-    ManagedBuffer buf;          // buffer to store total byte data of this character
+    ManagedBuffer buf;          // buffer to store total byte data of this character - display ready data
 } DisplayCharacter;
 
+// ---------------------------------------------------------------------------------------------------------------------------------
+// FUNCTIONS
+
+// creates and returns a new character, with empty buffers.
 DisplayCharacter newCharacter(int value, int width, int height){
     DisplayCharacter ch;
     ManagedBuffer buf((width*height));
@@ -94,6 +99,8 @@ DisplayCharacter newCharacter(int value, int width, int height){
     return ch;
 }
 
+// creates and returns a new character, with the given data stored as the visual representation
+// of this character.
 DisplayCharacter newCharacter(int value, int width, int height, ManagedBuffer charBytes){
     DisplayCharacter ch;
     ch.value = value;
@@ -105,15 +112,14 @@ DisplayCharacter newCharacter(int value, int width, int height, ManagedBuffer ch
 }
 
 // offset character data to the specified coordinates.
-// stores result in ch.buf, which is ready to display.
+// stores result in ch.buf, which is ready to send to the display.
 void offsetCharacter(DisplayCharacter *ch, int x, int y){
     // don't allow coordinates out of bounds
-    // uBit.display.scroll("1");
     if (x <= 0 || y <= 0 || x > 128 || y > 64){
         uBit.serial.printf("Invalid coordinates\n");
         exit(EXIT_FAILURE);
     }
-    // uBit.display.scroll("2");
+    
     ManagedBuffer buf(((OLED_WIDTH * OLED_HEIGHT)/8) + 1);  // will store all bytes needed to display a character on the screen
     ch->x = x;
     ch->y = y;
@@ -123,7 +129,6 @@ void offsetCharacter(DisplayCharacter *ch, int x, int y){
     int yOffset = y % 8 == 0 ? 8 : (y % 8);     // offset for each row in the vertical direction
     int rowOffset = (y - yOffset)/8;            // row number of this character
     int shiftAmount = yOffset-1;                // the amount to shift data in a page
-    // uBit.display.scroll("3");
     // populate buffer
 
     // First byte in the data buffer MUST be 0x80 - this is part of the communication protocol.
@@ -136,7 +141,6 @@ void offsetCharacter(DisplayCharacter *ch, int x, int y){
         buf[i] = 0x00;
         i++;
     }
-    // uBit.display.scroll("4");
     // character data
     int byteNum = 0;
     // for each row-height+1 because yOffset may push number into another page
